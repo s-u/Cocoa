@@ -1,0 +1,3 @@
+void initCocoa() {
+  InitializeCocoa();
+}

@@ -1,0 +1,9 @@
+Package: Cocoa
+Version: 0.1-0
+Title: Primitive Cocoa frontend
+Author: Simon Urbanek <Simon.Urbanek@math.uni-augsburg.de>
+Maintainer: Simon Urbanek <Simon.Urbanek@math.uni-augsburg.de>
+Depends: R (>= 1.5.0)
+Description: Primitive Cocoa frontend
+License: GPL version 2 or newer
+URL: http://stats.math.uni-augsburg.de/Cocoa/
