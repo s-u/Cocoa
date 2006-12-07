@@ -2,7 +2,11 @@ all: $(SHLIB)
 
 OBJECTS=cocoa.o cglue.o
 
-PKG_LIBS+=$(shell if test -e /System/Library/Frameworks/Foundation.framework; then echo '-framework Foundation'; else echo '-lobjc'; fi)
+# try to determine some flags automatically to avoid having to use autoconf
+# we support Apple, libFoundation in /usr/lib and GNUstep in /usr/lib/GNUstep
+PKG_OBJCFLAGS+=$(shell if test -e /usr/lib/GNUstep/System; then echo '-fconstant-string-class=NSConstantString -I/usr/lib/GNUstep/System/Library/Headers'; fi)
+
+PKG_LIBS+=$(shell if test -e /System/Library/Frameworks/Foundation.framework; then echo '-framework Foundation'; else if test -e /usr/lib/libFoundation.so; then echo '-lFoundation -lobjc'; else if test -e /usr/lib/GNUstep/System; then echo '-L/usr/lib/GNUstep/System/Library/Libraries -lgnustep-base -lm -z -lobjc' echo '-lobjc'; fi; fi; fi)
 
 cocoa.o: cocoa.m
 	$(CC) -c $^ -o $@ $(ALL_CPPFLAGS) $(PKG_OBJCFLAGS) $(ALL_CFLAGS)
