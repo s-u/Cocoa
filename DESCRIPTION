@@ -1,9 +1,9 @@
 Package: Cocoa
-Version: 0.1-0
+Version: 0.1-1
 Title: Primitive Obj-C/Cocoa frontend
-Author: Simon Urbanek <Simon.Urbanek@math.uni-augsburg.de>
-Maintainer: Simon Urbanek <Simon.Urbanek@math.uni-augsburg.de>
+Author: Simon Urbanek <Simon.Urbanek@r-project.org>
+Maintainer: Simon Urbanek <Simon.Urbanek@r-project.org>
 Depends: R (>= 1.9.0)
 Description: Primitive Obj-C/Cocoa frontend
-License: GPL version 2 or newer
-URL: http://stats.math.uni-augsburg.de/R/Cocoa/
+License: GPL version 2
+URL: http://www.rforge.net/Cocoa/
