@@ -12,7 +12,7 @@ rm -f /tmp/${PNAME}/mkdist
 cd /tmp/${PNAME}
 
 echo "Removing CVS and backup stuff ..."
-find . -name CVS | xargs rm -rf
+find . -name CVS -or -name .svn | xargs rm -rf
 find . -name \*~ | xargs rm -f
 
 VER=`awk -v ORS= '/Version:/ { print $2 }' DESCRIPTION`
