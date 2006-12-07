@@ -1,0 +1,9 @@
+all: $(SHLIB)
+
+OBJECTS=cocoa.o cglue.o
+
+PKG_LIBS+=$(shell if test -e /System/Library/Frameworks/Foundation.framework; then echo '-framework Foundation'; else echo '-lFoundation'; fi)
+
+cocoa.o: cocoa.m
+	$(CC) -c $^ -o $@ $(ALL_CPPFLAGS) $(PKG_OBJCFLAGS) $(ALL_CFLAGS)
+
