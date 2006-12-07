@@ -1,35 +1,44 @@
-#include <Cocoa/Cocoa.h>
+#import <Foundation/Foundation.h>
+#ifdef __APPLE__
+#import <Cocoa/Cocoa.h>
+#endif
 #include <R.h>
 #include <Rinternals.h>
 #include <Rdefines.h>
+
+#ifndef __APPLE__
+#define objc_getClass objc_get_class
+#endif
 
 NSAutoreleasePool * pool = NULL;
 
 void InitializeCocoa()
 {
-    // need a auto release pool for allocating objects
-	
-	// BUT inside R.app it's very dangerous to create a new pool, because it could be
-	// destroyed whenever R.app releases its pools. This is normally ok, but since the
-	// use is likely to relay on the persistence of objects as ruled by R it's much safer
-	// to let it be and let R.app manage the pools
+  /* need a auto release pool for allocating objects
+   *
+   * BUT inside R.app it's very dangerous to create a new pool, because it could be
+   * destroyed whenever R.app releases its pools. This is normally ok, but since the
+   * use is likely to relay on the persistence of objects as ruled by R it's much safer
+   * to let it be and let R.app manage the pools */
 	if (!objc_getClass("RController"))
 		pool = [[NSAutoreleasePool alloc] init];
 
     /* Gaining access to the shared application.  This is a very important step because it initializes
      * the Cocoa envionment.  This is required to do things like put up Cocoa alert dialogs.  
      */
+#ifdef __APPLE_
     [NSApplication sharedApplication];
+#endif
 }
 
 void DeInitializeCocoa()
 {
-    //deallocate the autorelease pool if neccessary.
+  /* deallocate the autorelease pool if neccessary. */
     if (pool)
         [pool release];
 }
 
-// send release msg to the corresponding Obj-C object as soon as it's no longer needed in R
+/* send release msg to the corresponding Obj-C object as soon as it's no longer needed in R */
 void idObjCfinalizer(SEXP obj)
 {
 	if (TYPEOF(obj)==LISTSXP)
@@ -40,7 +49,7 @@ void idObjCfinalizer(SEXP obj)
     }
 }
 
-// convert Obj-C object into Obj-C reference in R - note that the object automatically receives a retain message
+/* convert Obj-C object into Obj-C reference in R - note that the object automatically receives a retain message */
 SEXP ObjC2SEXP(id obj)
 {
 	SEXP class;
@@ -52,12 +61,12 @@ SEXP ObjC2SEXP(id obj)
 	SET_STRING_ELT(class, 0, mkChar("ObjCid"));
     SET_CLASS(robj, class);
 	UNPROTECT(1);
-    R_RegisterCFinalizer(sref, idObjCfinalizer); // should we use Ex and onExit=TRUE?
+	R_RegisterCFinalizer(sref, idObjCfinalizer); /* should we use Ex and onExit=TRUE? */
     return robj;
 }
 
 SEXP ObjCclass2SEXP(id obj)
-{ // we make a reference, but we don't retain it and don't register a finalizer
+{ /* we make a reference, but we don't retain it and don't register a finalizer */
 	SEXP class, sref = R_MakeExternalPtr((void*) obj, R_NilValue, R_NilValue);
     SEXP robj = CONS(sref, R_NilValue);
 	SET_TAG(robj, install("ref"));
@@ -69,7 +78,7 @@ SEXP ObjCclass2SEXP(id obj)
 	return robj;
 }
 
-// convert Obj-C reference in R into Obj-C object
+/* convert Obj-C reference in R into Obj-C object */
 id SEXP2ObjC(SEXP ref)
 {
 	if (TYPEOF(ref)==LISTSXP)
@@ -79,8 +88,8 @@ id SEXP2ObjC(SEXP ref)
     return (id) R_ExternalPtrAddr(ref);
 }
 
-// selectors are kept in a global hash table, so they are never deallocated
-// At any rate, it's not an object, so we cannot retain it
+/* selectors are kept in a global hash table, so they are never deallocated
+ * At any rate, it's not an object, so we cannot retain it */
 SEXP SEL2SEXP(SEL sel)
 {
 	SEXP class, sref = R_MakeExternalPtr((void*) sel, R_NilValue, R_NilValue);
@@ -104,7 +113,7 @@ SEL SEXP2SEL(SEXP ref)
     return (SEL) R_ExternalPtrAddr(ref);
 }
 
-// the string can be either STRSXP (then the first CHARSXP is used) or CHARSXP itself
+/* the string can be either STRSXP (then the first CHARSXP is used) or CHARSXP itself */
 SEL selectorFromRString(SEXP s)
 {
     char *c;
@@ -116,14 +125,14 @@ SEL selectorFromRString(SEXP s)
     if (TYPEOF(s)!=CHARSXP)
         s = STRING_ELT(s, 0);
     c = CHAR(s);
-    // we use manual allocation to make sure we don't run into some allocation pool problems
+    /* we use manual allocation to make sure we don't run into some allocation pool problems */
     sname = [[NSString alloc] initWithCString:c];
     res = NSSelectorFromString(sname);
     [sname release];
     return res;
 }
 
-// this one is not really used ...
+/* this one is not really used ... */
 Class classFromRString(SEXP s)
 {
     char *c;
@@ -135,7 +144,7 @@ Class classFromRString(SEXP s)
     if (TYPEOF(s)!=CHARSXP)
         s = STRING_ELT(s, 0);
     c = CHAR(s);
-    // we use manual allocation to make sure we don't run into some allocation pool problems
+    /* we use manual allocation to make sure we don't run into some allocation pool problems */
     sname = [[NSString alloc] initWithCString:c];
     res = NSClassFromString(sname);
     [sname release];
@@ -156,7 +165,7 @@ id classObjectFromRString(SEXP s)
     return objc_getClass(CHAR(s));
 }
 
-//====== .External functions - those are called from the R code -
+/*====== .External functions - those are called from the R code - */
 
 SEXP ObjCclass(SEXP par)
 {
@@ -184,6 +193,7 @@ SEXP ObjCsendMsg(SEXP par)
     int argPos=2;
     id obj;
     NSInvocation *invocation;
+    NSMethodSignature *ms;
     id retObject;
     SEL sel;
 	const char *mrt;
@@ -203,17 +213,17 @@ SEXP ObjCsendMsg(SEXP par)
     if (!obj)
         error("cannot find target class or object.");
     
-    //NSLog(@" object = %@", obj);
+    /* NSLog(@" object = %@", obj); */
 
     x = CAR(par); par = CDR(par);
     if (TYPEOF(x)!=STRSXP || LENGTH(x)<1)
         error("selector must be a string.");
 
     sel = selectorFromRString(x);
-    //NSLog(@" selector (%@) addr = %x", NSStringFromSelector(sel), sel);
+    /* NSLog(@" selector (%@) addr = %x", NSStringFromSelector(sel), sel); */
     
-	NSMethodSignature *ms = [obj methodSignatureForSelector: sel];
-	if (!ms)
+    ms = [obj methodSignatureForSelector: sel];
+    if (!ms)
 		error("cannot find method signature for the selector");
     invocation = [NSInvocation invocationWithMethodSignature: ms];
     [invocation setSelector: sel];
@@ -260,8 +270,8 @@ SEXP ObjCsendMsg(SEXP par)
             default:
                 error("unsupported parameter type in Obj-C call.");
         }
-		// be careful - the NSLog below will crash on everything but objects
-        //NSLog(@" parameter %d : %@", argPos, parval);
+	/* be careful - the NSLog below will crash on everything but objects
+	   NSLog(@" parameter %d : %@", argPos, parval); */
         [invocation setArgument: parptr atIndex: argPos];
         argPos++;
 		if (tmp) {
