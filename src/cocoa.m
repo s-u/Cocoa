@@ -8,6 +8,7 @@
 
 #ifndef __APPLE__
 #define objc_getClass objc_get_class
+#define objc_lookUpClass objc_lookup_class
 #endif
 
 NSAutoreleasePool * pool = NULL;
@@ -20,7 +21,7 @@ void InitializeCocoa()
    * destroyed whenever R.app releases its pools. This is normally ok, but since the
    * use is likely to relay on the persistence of objects as ruled by R it's much safer
    * to let it be and let R.app manage the pools */
-	if (!objc_getClass("RController"))
+	if (!objc_lookUpClass("RController"))
 		pool = [[NSAutoreleasePool alloc] init];
 
     /* Gaining access to the shared application.  This is a very important step because it initializes
