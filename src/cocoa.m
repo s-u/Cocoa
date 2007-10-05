@@ -1,6 +1,8 @@
 #import <Foundation/Foundation.h>
 #ifdef __APPLE__
 #import <Cocoa/Cocoa.h>
+#include <objc/objc.h>
+#include <objc/objc-runtime.h>
 #endif
 #include <R.h>
 #include <Rinternals.h>
@@ -40,7 +42,7 @@ void DeInitializeCocoa()
 }
 
 /* send release msg to the corresponding Obj-C object as soon as it's no longer needed in R */
-void idObjCfinalizer(SEXP obj)
+static void idObjCfinalizer(SEXP obj)
 {
 	if (TYPEOF(obj)==LISTSXP)
 		obj=CAR(obj);
@@ -51,7 +53,7 @@ void idObjCfinalizer(SEXP obj)
 }
 
 /* convert Obj-C object into Obj-C reference in R - note that the object automatically receives a retain message */
-SEXP ObjC2SEXP(id obj)
+static SEXP ObjC2SEXP(id obj)
 {
 	SEXP class;
     SEXP sref = R_MakeExternalPtr((void*) obj, R_NilValue, R_NilValue);
@@ -66,7 +68,7 @@ SEXP ObjC2SEXP(id obj)
     return robj;
 }
 
-SEXP ObjCclass2SEXP(id obj)
+static SEXP ObjCclass2SEXP(id obj)
 { /* we make a reference, but we don't retain it and don't register a finalizer */
 	SEXP class, sref = R_MakeExternalPtr((void*) obj, R_NilValue, R_NilValue);
     SEXP robj = CONS(sref, R_NilValue);
@@ -80,7 +82,7 @@ SEXP ObjCclass2SEXP(id obj)
 }
 
 /* convert Obj-C reference in R into Obj-C object */
-id SEXP2ObjC(SEXP ref)
+static id SEXP2ObjC(SEXP ref)
 {
 	if (TYPEOF(ref)==LISTSXP)
 		ref=CAR(ref);
@@ -91,7 +93,7 @@ id SEXP2ObjC(SEXP ref)
 
 /* selectors are kept in a global hash table, so they are never deallocated
  * At any rate, it's not an object, so we cannot retain it */
-SEXP SEL2SEXP(SEL sel)
+static SEXP SEL2SEXP(SEL sel)
 {
 	SEXP class, sref = R_MakeExternalPtr((void*) sel, R_NilValue, R_NilValue);
     SEXP robj = CONS(sref, R_NilValue);
@@ -103,7 +105,7 @@ SEXP SEL2SEXP(SEL sel)
 	return robj;
 }
 
-SEL SEXP2SEL(SEXP ref)
+static SEL SEXP2SEL(SEXP ref)
 {
 	if (!inherits(ref, "ObjCsel"))
 		error("object is not a selector.");
@@ -115,9 +117,9 @@ SEL SEXP2SEL(SEXP ref)
 }
 
 /* the string can be either STRSXP (then the first CHARSXP is used) or CHARSXP itself */
-SEL selectorFromRString(SEXP s)
+static SEL selectorFromRString(SEXP s)
 {
-    char *c;
+    const char *c;
     NSString *sname;
     SEL res;
     
@@ -133,10 +135,11 @@ SEL selectorFromRString(SEXP s)
     return res;
 }
 
+#if 0
 /* this one is not really used ... */
-Class classFromRString(SEXP s)
+static Class classFromRString(SEXP s)
 {
-    char *c;
+    const char *c;
     NSString *sname;
     Class res;
 
@@ -151,13 +154,10 @@ Class classFromRString(SEXP s)
     [sname release];
     return res;
 }
+#endif
 
-id classObjectFromRString(SEXP s)
+static id classObjectFromRString(SEXP s)
 {
-    char *c;
-    NSString *sname;
-    id res;
-
     if (TYPEOF(s)!=STRSXP && TYPEOF(s)!=CHARSXP)
         error("Obj-C class name must be a string.");
     if (TYPEOF(s)!=CHARSXP)
@@ -292,25 +292,119 @@ SEXP ObjCsendMsg(SEXP par)
 			error("Obj-C exception was raised");
 	}
 	mrt=[ms methodReturnType];
-    NSLog(@" returned (type %s).", mrt);
+	/* modifiers: r = const, [nNoORV] - method-related */
 	switch (*mrt) {
-		case '#':
+		case '#': /* class */
 			[invocation getReturnValue: &retObject];
 			return ObjCclass2SEXP(retObject);
-		case '@':
+		case '@': /* id */
 			[invocation getReturnValue: &retObject];
 			return ObjC2SEXP(retObject);
-		case 'c':
-			if (!mrt[1]) {
-				BOOL ba;
-				SEXP ro;
-				[invocation getReturnValue: &ba];
-				PROTECT(ro = allocVector(LGLSXP, 1));
-				LOGICAL(ro)[0] = ba;
-				UNPROTECT(1);
-				return ro;
+		case ':': /* SEL */
+		{
+			SEL s;
+			[invocation getReturnValue: &s];
+			return SEL2SEXP(s);
+		}
+		case '{': /* structure */
+			/* FIXME: we could try to convert some known ones ... */
+		case 'l': /* long */
+		case 'L': /* unsigned long */
+		case 'q': /* long long */
+		case 'Q': /* unsigned long long */
+		case '*': /* char * */
+		case '(': /* union */
+		case 'b': /* bit field (bnnn, nnn=number of bits) */
+		case '^': /* pointer to type (^type) */
+		case '?': /* unknown */
+			Rprintf("Note: ObjC return type '%s' is not implemented yet.\n", mrt);
+		case 'v': /* void */
+			break; /* UNIMPLEMENTED */
+		case 'i': /* signed int */
+		case 'I': /* unsigned int */	
+		{
+			int i;
+			[invocation getReturnValue: &i];
+			return ScalarInteger(i);
+		}
+		case 's': /* short */
+		{
+			unsigned short i;
+			[invocation getReturnValue: &i];
+			return ScalarInteger((int)i);
+		}
+		case 'S': /* unsigned short */
+		{
+			signed short i;
+			[invocation getReturnValue: &i];
+			return ScalarInteger((int)i);
+		}
+		case 'f': /* float */
+		{
+			float f;
+			[invocation getReturnValue: &f];
+			return ScalarReal((double)f);
+		}
+		case 'd': /* double */
+		{
+			float f;
+			[invocation getReturnValue: &f];
+			return ScalarReal((double)f);
+		}		
+		case 'c': /* char */
+		{
+			char c;
+			[invocation getReturnValue: &c];
+			return ScalarInteger((int)c);
+		}
+		case 'C': /* char */
+		{
+			unsigned char c;
+			[invocation getReturnValue: &c];
+			return ScalarInteger((int)c);
+		}
+		case '[':
+		{
+			const char *c = mrt+1;
+			while (*c>='0' && *c<='9') c++;
+			if (*c && c[1]==']') { /* 1d array */
+				char szb[32];
+				long n = 0;
+				memcpy(szb, mrt+1, c-mrt-1);
+				szb[c-mrt-1]=0;
+				n = atol(szb);
+				switch (*c) {
+					case 'i':
+					case 'I':
+					{
+						SEXP r = allocVector(INTSXP, n);
+						[invocation getReturnValue: INTEGER(r)];
+						return r;
+					}
+					case 'f':
+					{
+						SEXP r = allocVector(REALSXP, n);
+						if (n>0) {
+							int i = 0;
+							float *f = (float*) malloc(n * sizeof(float));
+							[invocation getReturnValue: f];
+							while (i < n) {
+								REAL(r)[i] = f[i];
+								i++;
+							}
+						}
+						return r;
+					}							
+					case 'd':
+					{
+						SEXP r = allocVector(REALSXP, n);
+						[invocation getReturnValue: REAL(r)];
+						return r;
+					}
+				}
 			}
 			break;
+		}
 	}
     return R_NilValue;
 }

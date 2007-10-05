@@ -15,3 +15,6 @@
 {
 	.External("ObjCselector", selector, PACKAGE="Cocoa")
 }
+
+# .M is a synonym for .MCall
+.M <- .MCall
