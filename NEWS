@@ -1,0 +1,19 @@
+NEWS
+
+0.1-3	(under development)
+    o	add special support for R-ObjC native bridging
+
+    o	add $ operator as syntactic sugar
+
+0.1-2	2007-10-05
+    o	add support for most scalar types and some array types
+
+    o	add .M alias for .MCall
+
+    o	add better autodetection
+
+0.1-1   2006-12-07
+    o	initial GNUstep support, cleanups
+
+0.1-0	2004-10-30
+    o	first usable release (Apple ObjC only)

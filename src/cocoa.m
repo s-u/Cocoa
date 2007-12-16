@@ -91,6 +91,29 @@ static id SEXP2ObjC(SEXP ref)
     return (id) R_ExternalPtrAddr(ref);
 }
 
+/* the following two functions are useful only in ObjR where all SEXPs are also ObjC objects - they allow the mapping of native objects into ObjCid objects and back */
+
+SEXP id_deref(SEXP ref) {
+  if (TYPEOF(ref)==LISTSXP)
+    ref=CAR(ref);
+  if (TYPEOF(ref)!=EXTPTRSXP)
+    error("Obj-C reference must be an external pointer.");
+  return (SEXP) R_ExternalPtrAddr(ref);
+}
+
+SEXP id_ref(SEXP obj) {
+  SEXP class;
+  SEXP sref = R_MakeExternalPtr((void*) obj, R_NilValue, R_NilValue);
+  SEXP robj = CONS(sref, R_NilValue);
+  SET_TAG(robj, install("ref"));
+  PROTECT(class = allocVector(STRSXP, 1));
+  SET_STRING_ELT(class, 0, mkChar("ObjCid"));
+  SET_CLASS(robj, class);
+  UNPROTECT(1);
+  return robj;
+}
+
+
 /* selectors are kept in a global hash table, so they are never deallocated
  * At any rate, it's not an object, so we cannot retain it */
 static SEXP SEL2SEXP(SEL sel)
