@@ -10,5 +10,5 @@ print.ObjCsel <- function(x, ...)
 
 print.ObjCid <- function(x, ...)
 {
-	cat(paste(.External("printObjC",x,PACKAGE="Cocoa"),"\n"))
+	cat(paste("Obj-C object:",.External("printObjC",x,PACKAGE="Cocoa"),"\n"))
 }

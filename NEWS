@@ -1,5 +1,21 @@
 NEWS
 
+0.2-0	(under development)
+    o	method signature is now used to define the parameter
+	types (preciously they were inferred from the types
+	of arguments) and types are coerced as necessary
+
+    o	new conversions code, support for many types
+	has been added. Structs are converted to
+	pairlists with a "stuct.name" attribute and vice versa.
+
+    o	basic Foundation structs (_NSRange, _NSPoint, _NSSize
+	and _NSRect) are defined along with the corresponding
+	constrcutor functions (NSMakeXxx)
+
+    o	selectors can now be passed either as selector objects
+	or simply as strings
+
 0.1-3	(under development)
     o	add special support for R-ObjC native bridging
 
