@@ -16,6 +16,9 @@ NEWS
     o	selectors can now be passed either as selector objects
 	or simply as strings
 
+    o	fix a bug where void return type would crash
+
+
 0.1-3	(under development)
     o	add special support for R-ObjC native bridging
 

@@ -549,6 +549,9 @@ SEXP ObjCsendMsg(SEXP par)
 			error("Obj-C exception was raised");
 	}
 	mrt=[ms methodReturnType];
+	/* we need to treat void separately as there is nothing to get */
+	if (mrt[0] == 'v' && !mrt[1]) return R_NilValue;
+
 	unsigned int buf_size = [ms methodReturnLength];
 	Dprintf(" method return type='%s', length=%d\n", mrt, buf_size);
 	if (buf_size > 128)
