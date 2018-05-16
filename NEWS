@@ -1,8 +1,13 @@
 NEWS
 
-0.2-0	(under development)
+0.2-1	(under development)
+    o	add support for more native types (NSInteger aka
+	long long and others, also BOOL arg type)
+
+
+0.2-0	2013-03-04
     o	method signature is now used to define the parameter
-	types (preciously they were inferred from the types
+	types (previously they were inferred from the types
 	of arguments) and types are coerced as necessary
 
     o	new conversions code, support for many types
@@ -19,7 +24,7 @@ NEWS
     o	fix a bug where void return type would crash
 
 
-0.1-3	(under development)
+0.1-3	2007-12-15
     o	add special support for R-ObjC native bridging
 
     o	add $ operator as syntactic sugar
