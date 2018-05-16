@@ -271,11 +271,23 @@ static SEXP parseReturnValue(char **rvPtr, const char **mrtPtr)
 			setAttrib(head, install("struct.name"), mkString(sName));
 			return head;
 		}
-			/* FIXME: we could try to convert some known ones ... */
 		case 'l': /* long */
+			rvNext(long);
+			return ScalarReal((double) rvCast(long));
 		case 'L': /* unsigned long */
+			rvNext(long);
+			return ScalarReal((double) rvCast(unsigned long));
 		case 'q': /* long long */
+			rvNext(long long);
+			return ScalarReal((double) rvCast(long long));
 		case 'Q': /* unsigned long long */
+			rvNext(long long);
+			return ScalarReal((double) rvCast(unsigned long long));
+		case 'B':
+			rvNext(BOOL);
+			return ScalarLogical((int) rvCast(BOOL));
+
+			/* FIXME: we could try to convert some known ones ... */
 		case '*': /* char * */
 		case '(': /* union */
 		case 'b': /* bit field (bnnn, nnn=number of bits) */
@@ -365,6 +377,10 @@ int convertArgument(SEXP arg, const char **atPtr, void *parval, int *pCount, voi
 	const char *at = *atPtr;
 	if (*at == 'r') { at++; isConst = YES; }
 	switch (*at) {
+		case 'c':
+			retArg(char, asInteger(arg));
+		case 'C':
+			retArg(unsigned char, asInteger(arg));
 		case 'i':
 		case 'I':
 			retArg(int, asInteger(arg));
@@ -380,6 +396,10 @@ int convertArgument(SEXP arg, const char **atPtr, void *parval, int *pCount, voi
 			retArg(float, asReal(arg));
 		case 'B':
 			retArg(BOOL, asLogical(arg));
+		case 'q':
+			retArg(long long, asReal(arg));
+		case 'Q':
+			retArg(unsigned long long, asReal(arg));
 		case ':':
 		{
 			if (TYPEOF(arg) == STRSXP)

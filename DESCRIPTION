@@ -1,5 +1,5 @@
 Package: Cocoa
-Version: 0.2-0
+Version: 0.2-1
 Title: Primitive Obj-C/Cocoa frontend
 Author: Simon Urbanek <Simon.Urbanek@r-project.org>
 Maintainer: Simon Urbanek <Simon.Urbanek@r-project.org>
